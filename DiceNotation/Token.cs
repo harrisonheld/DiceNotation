@@ -8,9 +8,12 @@ namespace DiceNotation
 {
     public enum TokenType
     {
-        DICE_ROLL,
-        OPERATOR,
-        CONSTANT
+        NUMBER,
+        BINARY_OPERATOR, // +, -, *, /
+        ROLL, // d
+        ROLL_MODIFIER, // modifes a d operator, 'keephighest', 'keeplowest', 'drophighest', 'droplowest', '!'
+        LPAREN,
+        RPAREN
     }
 
     public class Token

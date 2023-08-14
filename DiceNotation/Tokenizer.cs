@@ -6,32 +6,64 @@ namespace DiceNotation
 {
     public class Tokenizer
     {
-        public static List<Token> Tokenize(string input)
+        private string _input;
+
+        public Tokenizer(string input)
         {
-            List<Token> tokens = new List<Token>();
+            _input = input;
+            
+            _input = Preprocess(_input);
+        }
 
-            string pattern = @"\d+d\d+(keeplowest\d+|keephighest\d+)?|[\+\-*/]";
-            MatchCollection matches = Regex.Matches(input, pattern);
+        private string Preprocess(string before)
+        {
+            // Convert to lowercase
+            string lowercaseString = before.ToLower();
+            // Remove all whitespace characters
+            string processedString = string.Join("", lowercaseString.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
 
-            foreach (Match match in matches)
+            return processedString;
+        }
+
+        public List<Token> Tokenize()
+        {
+            List<(string pattern, TokenType type)> tokenPatterns = new List<(string, TokenType)>
             {
-                string tokenValue = match.Value;
-                TokenType tokenType;
+                (@"[0-9]+", TokenType.NUMBER),           // Match integers
+                (@"[-+*/]", TokenType.BINARY_OPERATOR),  // Match binary operators -, +, *, /
+                (@"d", TokenType.ROLL),                  // Match d
+                (@"[kd][lh]", TokenType.ROLL_MODIFIER),  // Match kh (keep highest), kl (keep lowest), dh (drop highest), dl (drop lowest)
+                (@"\!", TokenType.ROLL_MODIFIER),        // Match ! (exploding dice)
+                (@"\(", TokenType.LPAREN),               // Match left parenthesis
+                (@"\)", TokenType.RPAREN),               // Match right parenthesis
+            };
 
-                if (Regex.IsMatch(tokenValue, @"\d+d\d+(keeplowest\d+|keephighest\d+)?"))
+            List<Token> tokens = new List<Token>();
+            int index = 0;
+
+            while (index < _input.Length)
+            {
+                string substr = _input.Substring(index);
+
+                bool couldMatch = false;
+                foreach ((string pattern, TokenType type) in tokenPatterns)
                 {
-                    tokenType = TokenType.DICE_ROLL;
-                }
-                else if (Regex.IsMatch(tokenValue, @"[\+\-*/]"))
-                {
-                    tokenType = TokenType.OPERATOR;
-                }
-                else
-                {
-                    throw new ArgumentException($"Unrecognized token: {tokenValue}");
+                    string patternFromBeginning = $"^{pattern}";
+
+                    Match match = Regex.Match(substr, patternFromBeginning);
+                    if (match.Success)
+                    {
+                        tokens.Add(new Token(type, match.Value));
+                        index += match.Value.Length;
+                        couldMatch = true;
+                        break;
+                    }
                 }
 
-                tokens.Add(new Token(tokenType, tokenValue));
+                if(!couldMatch)
+                {
+                    throw new Exception($"Invalid token at index {index}: '{substr}'");
+                }
             }
 
             return tokens;
